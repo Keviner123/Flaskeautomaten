@@ -23,8 +23,6 @@ namespace Flaskeautomaten
 
             Console.Read();
         }
-
-
     }
 
     class BottleMachine
@@ -40,16 +38,16 @@ namespace Flaskeautomaten
             {
                 lock (ProducerBuffer)
                 {
-                    if (ProducerBuffer.Count == 0)
-                    {
                         //Fill up the whole buffer with sodas and beers.
-                        for (int i = 0; i < 5; i++)
+                        for (int i = 0; i < 20 - ProducerBuffer.Count; i+=2)
                         {
                             ProducerBuffer.Enqueue(new Soda(serialNo++));
                             ProducerBuffer.Enqueue(new Beer(serialNo++));
                             Console.WriteLine("Adding beer and soda");
+
                         }
-                    }
+                        //Announce that new beverages has been made.
+                        Monitor.PulseAll(ProducerBuffer);
                 }
             }
         }
@@ -61,30 +59,36 @@ namespace Flaskeautomaten
                 lock (ProducerBuffer)
                 //Moving beverage from producerbuffer to consumerbuffer
                 {
-                    for (int i = 0; i < ProducerBuffer.Count; i++)
-                    {
-                        var item = ProducerBuffer.Dequeue();
-                        Console.WriteLine("Moving {0}: with S/N {1} from producerbuffer to consumerbuffer", item.ToString(),item.SerialNo);
-                        
-                        if (item.GetType() == typeof(Soda))
-                        {
-                            lock (SodaBuffer)
-                            {
-                                SodaBuffer.Enqueue(item);
-                            }
-                        }
-                        else if (item.GetType() == typeof(Beer))
-                        {
-                            lock (BeerBuffer)
-                            {
-                                BeerBuffer.Enqueue(item);
-                            }
-                        }
 
-                        Console.WriteLine("Amount of beers in beerbuffer: "  + BeerBuffer.Count);
-                        Console.WriteLine("Amount of sodas in soadbuffer: " + SodaBuffer.Count);
-                        Thread.Sleep(100);
+                    if (ProducerBuffer.Count == 0)
+                    {
+                        Monitor.Wait(ProducerBuffer);
                     }
+
+                    Console.WriteLine("brews in the house");
+                    //ProducerBuffer.Dequeue();
+
+                    var item = ProducerBuffer.Dequeue();
+                    //Console.WriteLine("Moving {0}: with S/N {1} from producerbuffer to consumerbuffer", item.ToString(),item.SerialNo);
+
+                    if (item.GetType() == typeof(Soda))
+                    {
+                        lock (SodaBuffer)
+                        {
+                            SodaBuffer.Enqueue(item);
+                        }
+                    }
+                    else if (item.GetType() == typeof(Beer))
+                    {
+                    lock (BeerBuffer)
+                    {
+                        BeerBuffer.Enqueue(item);
+                    }
+
+                    }
+                    Console.WriteLine("Amount of beers in beerbuffer: " + BeerBuffer.Count);
+                    Console.WriteLine("Amount of sodas in soadbuffer: " + SodaBuffer.Count);
+                    //Thread.Sleep(5000);
                 }
             }
         }
@@ -93,7 +97,11 @@ namespace Flaskeautomaten
         {
             while (true)
             {
-                if(BeerBuffer.Count == 10)
+                if (BeerBuffer.Count == 0 %% SodaBuffer.Count == 0)
+                {
+                    Monitor.Wait(ProducerBuffer);
+                }
+
                 {
                     lock (BeerBuffer)
                     {
