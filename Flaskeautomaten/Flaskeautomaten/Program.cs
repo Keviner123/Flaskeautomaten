@@ -65,11 +65,8 @@ namespace Flaskeautomaten
                         Monitor.Wait(ProducerBuffer);
                     }
 
-                    Console.WriteLine("brews in the house");
-                    //ProducerBuffer.Dequeue();
-
                     var item = ProducerBuffer.Dequeue();
-                    //Console.WriteLine("Moving {0}: with S/N {1} from producerbuffer to consumerbuffer", item.ToString(),item.SerialNo);
+                    Console.WriteLine("Moving {0}: with S/N {1} from producerbuffer to consumerbuffer", item.ToString(), item.SerialNo);
 
                     if (item.GetType() == typeof(Soda))
                     {
@@ -80,11 +77,10 @@ namespace Flaskeautomaten
                     }
                     else if (item.GetType() == typeof(Beer))
                     {
-                    lock (BeerBuffer)
-                    {
-                        BeerBuffer.Enqueue(item);
-                    }
-
+                        lock (BeerBuffer)
+                        {
+                            BeerBuffer.Enqueue(item);
+                        }
                     }
                     Console.WriteLine("Amount of beers in beerbuffer: " + BeerBuffer.Count);
                     Console.WriteLine("Amount of sodas in soadbuffer: " + SodaBuffer.Count);
@@ -97,17 +93,26 @@ namespace Flaskeautomaten
         {
             while (true)
             {
-                if (BeerBuffer.Count == 0 %% SodaBuffer.Count == 0)
-                {
-                    Monitor.Wait(ProducerBuffer);
-                }
-
+                if(BeerBuffer.Count != 0)
                 {
                     lock (BeerBuffer)
                     {
                         for (int i = 0; i < BeerBuffer.Count; i++)
                         {
                             Console.WriteLine("Giving beer to the consumer");
+                            BeerBuffer.Dequeue();
+                        }
+                    }
+                }
+
+                if (SodaBuffer.Count != 0)
+                {
+                    lock (SodaBuffer)
+                    {
+                        for (int i = 0; i < SodaBuffer.Count; i++)
+                        {
+                            Console.WriteLine("Giving beer to the consumer");
+                            SodaBuffer.Dequeue();
                         }
                     }
                 }
